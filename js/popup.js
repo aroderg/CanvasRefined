@@ -69,7 +69,7 @@ const defaultOptions = {
         "dashboard_notes": false,
         "dashboard_notes_text": "",
         "better_todo": false,
-        "better_sidebar": true,
+        "better_sidebar": false,
         "todo_hr24": false,
 		"todo_separate_scrollbar": false,
         "condensed_cards": false,
