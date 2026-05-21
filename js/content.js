@@ -411,6 +411,15 @@ function applyOptionsChanges(changes) {
 					document.getElementById("better-sidebar-container").remove();
 				}
 				break;
+            case "sidebar_scale": {
+                const existingSidebar = document.getElementById("better-sidebar-container");
+                if (existingSidebar) {
+                    existingSidebar.remove();
+                    const mode = current_page.match(/^\/courses\/(\d+)\/?$/) ? "course" : "dash";
+                    setupBetterSidebar(mode);
+                }
+                break;
+            }
 		}
     });
 }
@@ -1339,6 +1348,20 @@ function setupBetterTodo() {
     }
 }
 
+function getSidebarScale() {
+    const rawScale = parseInt(options.sidebar_scale || 100);
+    if (isNaN(rawScale)) return 1;
+    return Math.max(0.7, Math.min(1.5, rawScale / 100));
+}
+
+function applySidebarScaleStyles(sidebarList) {
+    const scale = getSidebarScale();
+    sidebarList.style.setProperty("--bc-sidebar-icon-size", `${Math.round(20 * scale)}px`);
+    sidebarList.style.setProperty("--bc-sidebar-btn-height", `${Math.round(30 * scale)}px`);
+    sidebarList.style.setProperty("--bc-sidebar-btn-gap", `${Math.round(8 * scale)}px`);
+    sidebarList.style.setProperty("--bc-sidebar-label-size", `${Math.round(14 * scale)}px`);
+}
+
 function setupBetterSidebar(mode = "dash") {
     if (!options.better_sidebar) return;
     if (document.querySelector('#better-sidebar-container')) return;
@@ -1374,6 +1397,7 @@ function setupBetterSidebar(mode = "dash") {
 		let sidebarContent = makeElement("div", sidebarList, {
 			style: "display:flex;flex-direction:column;gap:20px;width:100%;flex:1;justify-content:flex-start;align-items:center;margin:40px;"
 		});
+        applySidebarScaleStyles(sidebarList);
 		// Populate sidebar from Canvas navigation menu dynamically
 		populateSidebarFromNav(sidebarContent);
 
@@ -1437,11 +1461,11 @@ function setupBetterSidebar(mode = "dash") {
 }
 function createSidebarButton(text, url, parent, icon) {
 	let button = makeElement("a", parent, {
-		style: "width:40%;height:30px;cursor:pointer;text-align:center;text-decoration:none;display:inline-flex;justify-content:center;align-items:center;gap:8px;color:var(--bctext-0) !important;font-weight:bold;",
+        style: "width:40%;height:var(--bc-sidebar-btn-height,30px);cursor:pointer;text-align:center;text-decoration:none;display:inline-flex;justify-content:center;align-items:center;gap:var(--bc-sidebar-btn-gap,8px);color:var(--bctext-0) !important;font-weight:bold;",
 		className: "bettercanvas-custom-btn better-sidebar-btn",
 		href: url,
 	});
-	button.innerHTML = `${icon ? `${icon}<span class="better-sidebar-label" style="font-size:clamp(10px, 2vw, 18px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${text}</span>` : `<span class="better-sidebar-label">${text}</span>`}`;
+    button.innerHTML = `${icon ? `${icon}<span class="better-sidebar-label" style="font-size:var(--bc-sidebar-label-size,14px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${text}</span>` : `<span class="better-sidebar-label" style="font-size:var(--bc-sidebar-label-size,14px);">${text}</span>`}`;
 }
 function populateSidebarFromNav(sidebarContent) {
 	const excludeIds = ["global_nav_help_link", "global_nav_history_link"];
@@ -1521,12 +1545,20 @@ function populateSidebarFromNav(sidebarContent) {
 	});
 }
 function updateSidebar(expanded, sidebarList, expander) {
-	sidebarList.style.width = expanded ? "150px" : "50px";
+    const scale = getSidebarScale();
+    sidebarList.style.width = expanded ? `${Math.round(150 * scale)}px` : `${Math.round(50 * scale)}px`;
+    applySidebarScaleStyles(sidebarList);
 	expander.style.transform = expanded ? "rotate(180deg)" : "rotate(0deg)";
+    expander.querySelector("svg").style.width = `${Math.round(30 * scale)}px`;
+    expander.querySelector("svg").style.height = `${Math.round(30 * scale)}px`;
 	const labels = document.querySelectorAll(".better-sidebar-label");
 	labels.forEach(label => label.style.display = expanded ? "block" : "none");
 	const buttons = document.querySelectorAll(".better-sidebar-btn");
 	buttons.forEach(label => label.style.width = expanded ? "80%" : "40%");
+    sidebarList.querySelectorAll(".better-sidebar-btn svg").forEach(svg => {
+        svg.style.width = "var(--bc-sidebar-icon-size,20px)";
+        svg.style.height = "var(--bc-sidebar-icon-size,20px)";
+    });
 	const courseLinksTitle = document.getElementById("better-course-links-title");
 	if (courseLinksTitle) {
 		courseLinksTitle.style.display = expanded ? "block" : "none";

@@ -27,6 +27,7 @@ const syncedSubOptions = [
 	"cardWidth",
 	"cardHeight",
 	"customBackgroundLink",
+    "sidebar_scale",
 ];
 const localSwitches = [];
 
@@ -54,7 +55,7 @@ const defaultOptions = {
         },
         "new_install": true,
         "assignments_due": true,
-        "gpa_calc": false,
+        "gpa_calc": true,
         "dark_mode": true,
         "gradent_cards": false,
         "disable_color_overlay": false,
@@ -64,12 +65,13 @@ const defaultOptions = {
         "num_assignments": 4,
         "custom_domain": [""],
         "assignments_done": [],
-        "dashboard_grades": false,
+        "dashboard_grades": true,
         "assignment_date_format": false,
         "dashboard_notes": false,
         "dashboard_notes_text": "",
         "better_todo": false,
         "better_sidebar": false,
+        "sidebar_scale": 100,
         "todo_hr24": false,
 		"todo_separate_scrollbar": false,
         "condensed_cards": false,
@@ -189,6 +191,17 @@ function setupTodoSlider(initial) {
     document.querySelector('#numTodoItemsSlider').addEventListener('input', function () {
         document.querySelector('#numTodoItems').textContent = this.value;
         chrome.storage.sync.set({ "num_todo_items": this.value });
+    });
+}
+
+function setupSidebarScaleSlider(initial) {
+    let el = document.querySelector("#sidebarScaleSlider");
+    if (!el) return;
+    el.value = initial;
+    document.querySelector("#sidebarScaleValue").textContent = initial;
+    el.addEventListener("input", function () {
+        document.querySelector("#sidebarScaleValue").textContent = this.value;
+        chrome.storage.sync.set({ "sidebar_scale": parseInt(this.value) });
     });
 }
 
@@ -352,6 +365,10 @@ function setup() {
 				identifier: "num_todo_items",
 				setup: (initial) => setupTodoSlider(initial),
 			},
+            {
+                identifier: "sidebar_scale",
+                setup: (initial) => setupSidebarScaleSlider(initial),
+            },
 			{
 				identifier: "card_limit",
 				setup: (initial) => setupCardLimitSlider(initial),
@@ -1061,7 +1078,16 @@ async function submitTheme() { //TODO: remake
     //     return;
     // }
 
-    const theme = await getExport(sync, ["custom_cards", "card_colors", "dark_preset", "custom_font", "gradient_cards", "disable_color_overlay"]);
+    const theme = await getExport(sync, [
+        ...syncedSwitches,
+        ...syncedSubOptions,
+        "custom_cards",
+        "card_colors",
+        "dark_preset",
+        "custom_font",
+        "gradient_cards",
+        "disable_color_overlay",
+    ]);
     const title = document.getElementById("submit-title");
     const credits = document.getElementById("submit-credits");
 
@@ -1150,6 +1176,15 @@ function saveCurrentTheme() {
                 "custom_cards": current["custom_cards"],
                 "card_colors": current["card_colors"] === null ? [current["dark_preset"]["links"]] : current["card_colors"],
                 "custom_font": current["custom_font"],
+                "better_todo": current["better_todo"],
+                "todo_hide_feedback": current["todo_hide_feedback"],
+                "todo_full_height": current["todo_full_height"],
+                "todo_hr24": current["todo_hr24"],
+                "todo_separate_scrollbar": current["todo_separate_scrollbar"],
+                "num_todo_items": current["num_todo_items"],
+                "hover_preview": current["hover_preview"],
+                "better_sidebar": current["better_sidebar"],
+                "sidebar_scale": current["sidebar_scale"],
 				"imageSize": current["imageSize"],
 				"cardRoundness": current["cardRoundness"],
 				"cardSpacing": current["cardSpacing"],
