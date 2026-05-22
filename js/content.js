@@ -470,6 +470,11 @@ function resetBetterSidebarLayout() {
     document.querySelector(".ic-Layout-contentWrapper")?.style.removeProperty("min-width");
     document.querySelector(".ic-Layout-contentMain")?.style.removeProperty("flex");
     document.querySelector(".ic-Layout-contentMain")?.style.removeProperty("min-width");
+    document.querySelector(".ic-Layout-contentMain")?.style.removeProperty("margin");
+    document.querySelector(".ic-Layout-contentMain")?.style.removeProperty("padding");
+    document.querySelector(".ic-Layout-contentMain")?.style.removeProperty("background");
+    document.querySelector(".ic-Layout-contentMain")?.style.removeProperty("backdrop-filter");
+    document.querySelector(".ic-Layout-contentMain")?.style.removeProperty("-webkit-backdrop-filter");
     document.getElementById("left-side")?.style.removeProperty("display");
     document.getElementById("better-sidebar-container")?.remove();
     clearBetterSidebarLayoutFix();
@@ -500,11 +505,15 @@ function applyCustomBackground() {
             border-radius: 5px;
         }
         #right-side-wrapper {
-            background: color-mix(in srgb, var(--bcbackground-0) 45%, transparent) !important;
-            /* backdrop-filter: blur(10px) !important; */
+            // backdrop-filter: blur(10px) !important;
+            background-color: color-mix(in srgb, var(--bcbackground-0), transparent 35%);
             border-radius: 5px;
         }
-        .header-bar,
+        .header-bar {
+            background: none !important;
+            padding: 0 !important;
+            border: none !important;
+        }
         .item-group-condensed,
         .item-group-container {
             background: transparent !important;
@@ -517,6 +526,7 @@ function applyCustomBackground() {
         #context_modules_sortable_container {
             border: none !important;
             background: none !important;
+            padding: 0 !important;
             /* backdrop-filter: blur(0) !important; */
         }
         .item-group-condensed .ig-header,
@@ -534,7 +544,6 @@ function applyCustomBackground() {
             border-radius: 0 !important;
         }
         .item-group-condensed .ig-row.ig-published.no-estimated-duration {
-            background: color-mix(in srgb, var(--bcbackground-0) 45%, transparent) !important;
             color: var(--bctext-1) !important;
             border: 1px solid color-mix(in srgb, var(--bcborders) 60%, transparent) !important;
             border-radius: 0 !important;
@@ -565,7 +574,13 @@ function applyCustomBackground() {
         .item-group-condensed.context_module_item,
         .item-group-condensed[class~="context_module"] {
             margin-bottom: 10px !important;
+            padding-top: 0 !important;
             padding-bottom: 0 !important;
+        }
+
+        .item-group-condensed .ig-header.header,
+        .item-group-container .ig-header.header {
+            padding-top: 0 !important;
         }
 
         /* Apply backdrop blur only to module panels, not to all headers */
@@ -575,7 +590,6 @@ function applyCustomBackground() {
         .item-group-condensed.context_module_item:hover,
         .item-group-condensed.context_module.context_module_item_hover,
         .item-group-condensed.context_module_item.context_module_item_hover {
-            // background: color-mix(in srgb, var(--bcbackground-0) 45%, transparent) !important;
             backdrop-filter: blur(5px) !important;
             -webkit-backdrop-filter: blur(5px) !important;
         }
@@ -583,7 +597,8 @@ function applyCustomBackground() {
         .bettercanvas-gpa,
         .ic-DashboardCard {
             background: var(--bcbackground-0) !important;
-        }`; // TODO: liquid glass?
+        }`; 
+        // TODO: liquid glass?
     }
     
     document.documentElement.appendChild(style);
@@ -1053,7 +1068,7 @@ function updateIndicator(element) {
 			// btn.style.filter = "none";
 		}
 		else {
-			btn.firstElementChild.style.opacity = ".3";
+			btn.firstElementChild.style.opacity = ".5";
 			// btn.style.filter = "grayscale(100%)";
 		}
 	})
@@ -1218,7 +1233,10 @@ async function createTodoSections(location) {
 			}
 		}
 
-		const sidebar = document.getElementById("right-side-wrapper");
+        const sidebar = document.getElementById("right-side-wrapper");
+        ensureRightSideWrapperScrollbarHidden();
+        sidebar.style.setProperty("scrollbar-width", "none");
+        sidebar.style.setProperty("-ms-overflow-style", "none");
 		if (options.todo_full_height) {
 			sidebar.style.minHeight = "100vh";
 		} else {
@@ -1237,6 +1255,23 @@ async function createTodoSections(location) {
 			// maybe invisible scrollbar?
 		}
 	});
+}
+
+function ensureRightSideWrapperScrollbarHidden() {
+    let style = document.getElementById("bettercanvas-hide-right-sidebar-scrollbar") || document.createElement("style");
+    style.id = "bettercanvas-hide-right-sidebar-scrollbar";
+    style.textContent = `
+        #right-side-wrapper {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+        #right-side-wrapper::-webkit-scrollbar {
+            width: 0 !important;
+            height: 0 !important;
+            display: none !important;
+        }
+    `;
+    document.head.append(style);
 }
 
 function clearTodoList() {
@@ -1520,11 +1555,11 @@ async function setupBetterSidebar(mode = getSidebarLayoutMode()) {
     try {
         const layoutMode = mode === "course" || mode === "dash" ? mode : getSidebarLayoutMode();
         const outerWrapper = document.getElementById("main");
-        outerWrapper.style.setProperty("display", "flex", "important");
+        outerWrapper?.style.setProperty("display", "flex", "important");
         // document.getElementById("not_right_side").style.setProperty("display", "none", "important");
-        const leftSide = document.getElementById("left-side")
-        leftSide.style.opacity = "1";
-        leftSide.style.position = "static";
+        const leftSide = document.getElementById("left-side");
+        leftSide?.style.setProperty("opacity", "1");
+        leftSide?.style.setProperty("position", "static");
         const mainWrapper = document.querySelector(".ic-Layout-contentWrapper");
         if (!mainWrapper) return;
         const expandedPromise = getSidebarExpandedState(layoutMode);
@@ -1532,9 +1567,10 @@ async function setupBetterSidebar(mode = getSidebarLayoutMode()) {
         mainWrapper.style.display = "flex";
         mainWrapper.style.alignItems = "stretch";
         mainWrapper.style.minWidth = "0";
-        document.querySelector(".ic-Layout-contentMain")?.style.setProperty("flex", "1 1 auto");
-        document.querySelector(".ic-Layout-contentMain")?.style.setProperty("min-width", "0");
-        if (layoutMode === "course") {
+        const contentMain = document.querySelector(".ic-Layout-contentMain");
+        contentMain?.style.setProperty("flex", "1 1 auto");
+        contentMain?.style.setProperty("min-width", "0");
+        if (layoutMode === "course" && leftSide) {
             const notRightSide = document.getElementById("not_right_side");
             const rightSideWrapper = document.getElementById("right-side-wrapper");
             leftSide.style.flex = "0 0 250px";
@@ -1546,10 +1582,16 @@ async function setupBetterSidebar(mode = getSidebarLayoutMode()) {
                 notRightSide.style.minWidth = "0";
             }
             if (rightSideWrapper) {
-                rightSideWrapper.style.flex = "0 0 340px";
-                rightSideWrapper.style.width = "340px";
-                rightSideWrapper.style.maxWidth = "340px";
+                rightSideWrapper.style.flex = "0 0 280px";
+                rightSideWrapper.style.width = "280px";
+                rightSideWrapper.style.maxWidth = "280px";
             }
+            contentMain?.style.setProperty("margin", "26px 38px 38px", "important");
+            contentMain?.style.setProperty("padding", "10px", "important");
+            contentMain?.style.setProperty("border-radius", "10px", "important");
+            contentMain?.style.setProperty("background", "color-mix(in srgb, var(--bcbackground-0) 45%, transparent)", "important");
+            contentMain?.style.setProperty("backdrop-filter", "blur(5px)", "important");
+            contentMain?.style.setProperty("-webkit-backdrop-filter", "blur(5px)", "important");
         }
         const sidebarParent = layoutMode === "course" && leftSide ? leftSide : mainWrapper;
         if (layoutMode === "course" && leftSide) {
@@ -1706,32 +1748,70 @@ function populateSidebarFromNav(sidebarContent) {
 }
 function updateSidebar(expanded, sidebarList, expander) {
     const scale = getSidebarScale();
-    sidebarList.style.width = expanded ? `${Math.round(150 * scale)}px` : `${Math.round(50 * scale)}px`;
+    const expandedWidth = Math.round(150 * scale);
+    const collapsedWidth = Math.round(50 * scale);
+    sidebarList.style.width = expanded ? `${expandedWidth}px` : `${collapsedWidth}px`;
     applySidebarScaleStyles(sidebarList);
-	expander.style.transform = expanded ? "rotate(180deg)" : "rotate(0deg)";
+
+    expander.style.transform = expanded ? "rotate(180deg)" : "rotate(0deg)";
     expander.querySelector("svg").style.width = `${Math.round(30 * scale)}px`;
     expander.querySelector("svg").style.height = `${Math.round(30 * scale)}px`;
-	const labels = document.querySelectorAll(".better-sidebar-label");
-	labels.forEach(label => label.style.display = expanded ? "block" : "none");
-	const buttons = document.querySelectorAll(".better-sidebar-btn");
-	buttons.forEach(label => label.style.width = expanded ? "80%" : "40%");
+    const labels = document.querySelectorAll(".better-sidebar-label");
+    labels.forEach(label => label.style.display = expanded ? "block" : "none");
+    const buttons = document.querySelectorAll(".better-sidebar-btn");
+    buttons.forEach(label => label.style.width = expanded ? "80%" : "40%");
     sidebarList.querySelectorAll(".better-sidebar-btn svg").forEach(svg => {
         svg.style.width = "var(--bc-sidebar-icon-size,20px)";
         svg.style.height = "var(--bc-sidebar-icon-size,20px)";
     });
-	const courseLinksTitle = document.getElementById("better-course-links-title");
-	if (courseLinksTitle) {
-		courseLinksTitle.style.display = expanded ? "block" : "none";
-		// Also hide separator when collapsed
-		const separator = courseLinksTitle.nextElementSibling;
-		if (separator) separator.style.display = expanded ? "block" : "none";
-		
-		const container = document.getElementById("better-course-links");
-		if (container) {
-			container.style.opacity = expanded ? "1" : "0.6";
-			container.style.gap = expanded ? "12px" : "8px";
-		}
-	}
+
+    // Expand (or restore) the entire left-side column when the sidebar toggles
+    const leftSide = document.getElementById("left-side");
+    if (leftSide) {
+        // on first run store the original width (prefer computed) and inline flex/maxWidth
+        if (!leftSide.dataset.bcOrigWidth) {
+            const computed = getComputedStyle(leftSide).width || "";
+            leftSide.dataset.bcOrigWidth = leftSide.style.width || "";
+            leftSide.dataset.bcOrigFlex = leftSide.style.flex || "";
+            leftSide.dataset.bcOrigMaxWidth = leftSide.style.maxWidth || "";
+            leftSide.dataset.bcOrigWidthPx = parseFloat(computed) || 0;
+        }
+
+        const origPx = parseFloat(leftSide.dataset.bcOrigWidthPx || 0);
+        const delta = expandedWidth - collapsedWidth;
+
+        if (expanded) {
+            if (origPx > 0) {
+                const newWidth = Math.round(origPx + delta);
+                leftSide.style.flex = `0 0 ${newWidth}px`;
+                leftSide.style.width = `${newWidth}px`;
+                leftSide.style.maxWidth = `${newWidth}px`;
+            } else {
+                leftSide.style.flex = `0 0 ${expandedWidth}px`;
+                leftSide.style.width = `${expandedWidth}px`;
+                leftSide.style.maxWidth = `${expandedWidth}px`;
+            }
+        } else {
+            // restore original inline values if present, otherwise remove the properties
+            if (leftSide.dataset.bcOrigWidth !== "") leftSide.style.width = leftSide.dataset.bcOrigWidth; else leftSide.style.removeProperty('width');
+            if (leftSide.dataset.bcOrigFlex !== "") leftSide.style.flex = leftSide.dataset.bcOrigFlex; else leftSide.style.removeProperty('flex');
+            if (leftSide.dataset.bcOrigMaxWidth !== "") leftSide.style.maxWidth = leftSide.dataset.bcOrigMaxWidth; else leftSide.style.removeProperty('max-width');
+        }
+    }
+
+    const courseLinksTitle = document.getElementById("better-course-links-title");
+    if (courseLinksTitle) {
+        courseLinksTitle.style.display = expanded ? "block" : "none";
+        // Also hide separator when collapsed
+        const separator = courseLinksTitle.nextElementSibling;
+        if (separator) separator.style.display = expanded ? "block" : "none";
+        
+        const container = document.getElementById("better-course-links");
+        if (container) {
+            container.style.opacity = expanded ? "1" : "0.6";
+            container.style.gap = expanded ? "12px" : "8px";
+        }
+    }
 }
 function getCourseLinks() {
 	const linkList = document.getElementById("section-tabs");
