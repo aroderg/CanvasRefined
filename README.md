@@ -60,7 +60,7 @@ Actually Better Canvas adds more with more to come!
 - Custom Background (by URL, theme compatible)
 - Popup UI revamp
 - NEW Better todo list
-- better sidebar (beta)
+- better sidebar
 
 ## Planned Features (by priority)
 - widgets (music, timer)
@@ -89,6 +89,7 @@ Actually Better Canvas adds more with more to come!
 - flashcards
 - goals
 - Scheduled Reminder Popups
+- simplified UI
 
 ## Community suggestions (maybe will be done at some point)
 - when opening assignments it will show you "if you get a 0 on this your grade will be _"

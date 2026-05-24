@@ -16,6 +16,95 @@ function isGradesPage() {
     return /^\/courses\/\d+\/grades(?:\/|$)/.test(current_page);
 }
 
+function getSubmissionAssignmentLink() {
+    const match = current_page.match(/^\/courses\/(\d+)\/assignments\/(\d+)\/submissions\/(\d+)(?:\/|$)/);
+    if (!match) return null;
+    return `${domain}/courses/${match[1]}/assignments/${match[2]}/`;
+}
+
+let submissionPageButtonObserver = null;
+
+function addSubmissionPageButton() {
+    const assignmentLink = getSubmissionAssignmentLink();
+    if (!assignmentLink) return;
+    const content = document.getElementById("content");
+    if (!content || content.querySelector("#bettercanvas-assignment-return")) return;
+
+    makeElement("a", content, {
+        id: "bettercanvas-assignment-return",
+        className: "bettercanvas-custom-btn",
+        href: assignmentLink,
+        textContent: "Back to Assignment",
+        style: "display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;margin:0 0 12px 0;padding:10px 14px;text-decoration:none;font-weight:700;",
+    }, true);
+}
+
+let sequenceFooterObserver = null;
+
+function isAssignmentPage() {
+    return /^\/courses\/\d+\/assignments(?:\/\d+)?(?:\/|$)/.test(current_page);
+}
+
+function removeSequenceFooter() {
+    if (!isAssignmentPage()) return false;
+    const sequenceFooter = document.getElementById("sequence_footer");
+    if (!sequenceFooter) return false;
+    sequenceFooter.remove();
+    return true;
+}
+
+function watchSequenceFooter() {
+    if (!isAssignmentPage()) return;
+    if (removeSequenceFooter()) return;
+    if (sequenceFooterObserver) return;
+
+    sequenceFooterObserver = new MutationObserver(() => {
+        if (removeSequenceFooter() && sequenceFooterObserver) {
+            sequenceFooterObserver.disconnect();
+            sequenceFooterObserver = null;
+        }
+    });
+
+    sequenceFooterObserver.observe(document.documentElement, { childList: true, subtree: true });
+    setTimeout(() => {
+        if (sequenceFooterObserver) {
+            sequenceFooterObserver.disconnect();
+            sequenceFooterObserver = null;
+        }
+    }, 10000);
+}
+
+function ensureSubmissionPageButton() {
+    const assignmentLink = getSubmissionAssignmentLink();
+    if (!assignmentLink) return false;
+    const content = document.getElementById("content");
+    if (!content) return false;
+    if (content.querySelector("#bettercanvas-assignment-return")) return true;
+    addSubmissionPageButton();
+    return Boolean(content.querySelector("#bettercanvas-assignment-return"));
+}
+
+function watchSubmissionPageButton() {
+    if (!getSubmissionAssignmentLink()) return;
+    if (ensureSubmissionPageButton()) return;
+    if (submissionPageButtonObserver) return;
+
+    submissionPageButtonObserver = new MutationObserver(() => {
+        if (ensureSubmissionPageButton() && submissionPageButtonObserver) {
+            submissionPageButtonObserver.disconnect();
+            submissionPageButtonObserver = null;
+        }
+    });
+
+    submissionPageButtonObserver.observe(document.documentElement, { childList: true, subtree: true });
+    setTimeout(() => {
+        if (submissionPageButtonObserver) {
+            submissionPageButtonObserver.disconnect();
+            submissionPageButtonObserver = null;
+        }
+    }, 10000);
+}
+
 function getSidebarStateMode(mode = getSidebarLayoutMode()) {
     return mode === "course" ? "course" : "dashboard";
 }
@@ -306,6 +395,8 @@ function startExtension() {
         updateReminders();
         applyCustomBackground();
         ensureBetterSidebar();
+        watchSequenceFooter();
+        watchSubmissionPageButton();
 
         //getClassAverages();
         

@@ -30,6 +30,7 @@ const syncedSubOptions = [
     "sidebar_scale",
 ];
 const localSwitches = [];
+const fontsDropdownStateKey = "fonts_dropdown_open";
 
 //const apiurl = "http://localhost:3000";
 const apiurl = "https://bettercanvas.diditupe.dev";
@@ -856,20 +857,29 @@ function setup() {
 		sendFromPopup("updateBackground");
     });
 
-    document.getElementById("fontsDropdown").addEventListener("click", (e) => {
+    const applyFontsDropdownState = (isOpen) => {
         const el = document.getElementById("quick-fonts");
         const el2 = document.getElementsByClassName("custom-font")[0];
         const arrow = document.getElementById("fontsDropdownArrow");
-        if (el.style.display === "none") {
-            el.style.display = "flex";
-            el2.style.display = "block";
-            arrow.style.transform = "rotate(180deg)";
+        if (!el || !el2 || !arrow) return;
+        el.style.display = isOpen ? "flex" : "none";
+        el2.style.display = isOpen ? "block" : "none";
+        arrow.style.transform = isOpen ? "rotate(180deg)" : "rotate(0deg)";
+    };
 
-        } else {
-            el.style.display = "none";
-            el2.style.display = "none";
-            arrow.style.transform = "rotate(0deg)";
-        }
+    chrome.storage.local.get([fontsDropdownStateKey], (storage) => {
+        const isOpen = storage[fontsDropdownStateKey] !== false;
+        applyFontsDropdownState(isOpen);
+    });
+
+    document.getElementById("fontsDropdown").addEventListener("click", () => {
+        const el = document.getElementById("quick-fonts");
+        const el2 = document.getElementsByClassName("custom-font")[0];
+        if (!el || !el2) return;
+        const isCurrentlyOpen = getComputedStyle(el).display !== "none" && getComputedStyle(el2).display !== "none";
+        const nextOpen = !isCurrentlyOpen;
+        applyFontsDropdownState(nextOpen);
+        chrome.storage.local.set({ [fontsDropdownStateKey]: nextOpen });
     });
 
 }
