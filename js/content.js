@@ -1673,11 +1673,30 @@ async function setupBetterSidebar(mode = getSidebarLayoutMode()) {
 }
 function createSidebarButton(text, url, parent, icon) {
 	let button = makeElement("a", parent, {
-        style: "width:40%;height:var(--bc-sidebar-btn-height,30px);cursor:pointer;text-align:center;text-decoration:none;display:inline-flex;justify-content:center;align-items:center;gap:var(--bc-sidebar-btn-gap,8px);color:var(--bctext-0) !important;font-weight:bold;",
+        style: "width:40%;height:var(--bc-sidebar-btn-height,30px);cursor:pointer;text-align:center;text-decoration:none;display:inline-flex;justify-content:center;align-items:center;gap:var(--bc-sidebar-btn-gap,8px);color:var(--bctext-0) !important;font-weight:bold;position:relative;",
 		className: "bettercanvas-custom-btn better-sidebar-btn",
 		href: url,
 	});
     button.innerHTML = `${icon ? `${icon}<span class="better-sidebar-label" style="font-size:var(--bc-sidebar-label-size,14px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${text}</span>` : `<span class="better-sidebar-label" style="font-size:var(--bc-sidebar-label-size,14px);">${text}</span>`}`;
+    return button;
+}
+
+function getNavBadgeCount(item) {
+    const badge = item.querySelector(".menu-item__badge");
+    if (!badge) return 0;
+    const badgeText = badge.querySelector('[aria-hidden="true"]')?.textContent?.trim() || badge.textContent?.trim() || "";
+    const count = parseInt(badgeText, 10);
+    return Number.isFinite(count) && count > 0 ? count : 0;
+}
+
+function addSidebarButtonBadge(button, count) {
+    if (!button || !count) return;
+    button.querySelector(".better-sidebar-badge")?.remove();
+    makeElement("div", button, {
+        className: "better-sidebar-badge",
+        style: "position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background-color:#ff0000;color:white;font-size:11px;line-height:16px;display:flex;justify-content:center;align-items:center;box-sizing:border-box;pointer-events:none;",
+        textContent: String(count),
+    });
 }
 function populateSidebarFromNav(sidebarContent) {
 	const excludeIds = ["global_nav_help_link", "global_nav_history_link"];
@@ -1755,7 +1774,8 @@ function populateSidebarFromNav(sidebarContent) {
             }
 
             if (itemId === "global_nav_dashboard_link") hasDashboardButton = true;
-            createSidebarButton(text, href, sidebarContent, icon);
+            const button = createSidebarButton(text, href, sidebarContent, icon);
+            addSidebarButtonBadge(button, getNavBadgeCount(item));
         });
     }
 
