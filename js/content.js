@@ -8,12 +8,25 @@ function getCurrentCourseId() {
 
 function getSidebarLayoutMode() {
     if (current_page.match(/^\/courses\/(\d+)(?:\/|$)/)) return "course";
+    if (current_page === "/courses" || current_page === "/courses/") return "dash";
     if (current_page === "/" || current_page === "") return "dash";
-    return "general";
+    return "dash";
 }
 
 function isGradesPage() {
     return /^\/courses\/\d+\/grades(?:\/|$)/.test(current_page);
+}
+
+function isCoursesIndexPage() {
+    return /^\/courses\/?$/.test(current_page);
+}
+
+function isGroupsIndexPage() {
+    return /^\/groups\/?$/.test(current_page);
+}
+
+function isConversationsPage() {
+    return /^\/conversations(?:\/|$)/.test(current_page);
 }
 
 function getSubmissionAssignmentLink() {
@@ -648,6 +661,37 @@ function applyCustomBackground() {
             padding-left: 10px !important;
             padding-right: 10px !important;
         }
+        ${isCoursesIndexPage() ? `
+        #content {
+            margin: 36px 48px 48px !important;
+            padding: 10px !important;
+            background-color: color-mix(in srgb, var(--bcbackground-0), transparent 35%) !important;
+            border-radius: 5px !important;
+            box-sizing: border-box !important;
+        }
+        ` : ""}
+        ${isGroupsIndexPage() ? `
+        #content {
+            margin: 36px 48px 48px !important;
+            padding: 10px !important;
+            background-color: color-mix(in srgb, var(--bcbackground-0), transparent 35%) !important;
+            border-radius: 5px !important;
+            box-sizing: border-box !important;
+        }
+        ` : ""}
+        ${isConversationsPage() ? `
+        .css-1nh4pc4-view-flexItem {
+            background-color: color-mix(in srgb, var(--bcbackground-0), transparent 35%) !important;
+            border-radius: 5px !important;
+            box-sizing: border-box !important;
+        }
+        .css-1nh4pc4-view-flexItem svg,
+        .css-1nh4pc4-view-flexItem svg * {
+            fill: currentColor !important;
+            stroke: currentColor !important;
+            color: var(--bctext-0) !important;
+        }
+        ` : ""}
         .item-group-condensed .ig-row.ig-published.no-estimated-duration {
             color: var(--bctext-1) !important;
             border: 1px solid color-mix(in srgb, var(--bcborders) 60%, transparent) !important;

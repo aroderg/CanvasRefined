@@ -173,6 +173,7 @@ span[style*='background: #fff'],
 .css-1fwux0x-view--block,
 .css-1v8v5q1-optionItem,
 #comments-tray,
+.css-d76rpr-view--inlineBlock[data-testid='tool-bar'],
 .css-vxe90h-view--inlineBlock,
 .bettercanvas-todo-actions,
 .css-sg1rn7-view {
