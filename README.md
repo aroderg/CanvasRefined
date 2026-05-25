@@ -61,10 +61,10 @@ Actually Better Canvas adds more with more to come!
 - Popup UI revamp
 - NEW Better todo list
 - better sidebar
+- simplified UI
 
 ## Planned Features (by priority)
 - widgets (music, timer)
-- better notes
 - auto rotate theme + theme history + fix theme submissions
 - mail assistent + ui revamp
 - better calender (+ calender sync)
@@ -73,8 +73,6 @@ Actually Better Canvas adds more with more to come!
 - fix darkmode fixer
 - make sidebar and todo list work on all pages that need them
 - grade history with graph
-- preview font
-- button to remove all card images
 
 ## Extra features that might be added:
 - card grade position, card outline
@@ -89,7 +87,8 @@ Actually Better Canvas adds more with more to come!
 - flashcards
 - goals
 - Scheduled Reminder Popups
-- simplified UI
+- preview font
+- button to remove all card images and undo
 
 ## Community suggestions (maybe will be done at some point)
 - when opening assignments it will show you "if you get a 0 on this your grade will be _"

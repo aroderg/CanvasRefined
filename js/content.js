@@ -1229,6 +1229,241 @@ function updateIndicator(element) {
 // better todo html
 betterTodoFilter = "tasks";
 let domContainers = {};
+
+function formatDateForInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function formatTimeForInput(date) {
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+}
+
+function buildPlannerNotePayload(form) {
+    const title = form.querySelector("#better-todo-new-task-title")?.value?.trim();
+    const details = form.querySelector("#better-todo-new-task-details")?.value?.trim();
+    const courseIdRaw = form.querySelector("#better-todo-new-task-course")?.value;
+    const dateValue = form.querySelector("#better-todo-new-task-date")?.value;
+    const timeValue = form.querySelector("#better-todo-new-task-time")?.value;
+
+    if (!title) {
+        throw new Error("Task title is required.");
+    }
+
+    if (!dateValue || !timeValue) {
+        throw new Error("Please choose both a date and time.");
+    }
+
+    const localDateTime = new Date(`${dateValue}T${timeValue}:00`);
+    if (Number.isNaN(localDateTime.getTime())) {
+        throw new Error("Invalid task date.");
+    }
+
+    return {
+        title,
+        details,
+        courseId: courseIdRaw ? parseInt(courseIdRaw) : null,
+        // Canvas accepts local timestamp strings more reliably than UTC ISO strings for planner notes.
+        todoDate: `${dateValue}T${timeValue}:00`,
+    };
+}
+
+async function createCanvasPlannerNote(payload) {
+    const csrfToken = CSRFtoken();
+    const plannerNote = {
+        title: payload.title,
+        todo_date: payload.todoDate,
+    };
+    if (payload.details) plannerNote.details = payload.details;
+    if (payload.courseId) plannerNote.course_id = payload.courseId;
+
+    const attempts = [
+        {
+            headers: {
+                "content-type": "application/json",
+                "accept": "application/json",
+                "X-CSRF-Token": csrfToken,
+            },
+            body: JSON.stringify({ planner_note: plannerNote }),
+        },
+        {
+            headers: {
+                "content-type": "application/json",
+                "accept": "application/json",
+                "X-CSRF-Token": csrfToken,
+            },
+            body: JSON.stringify(plannerNote),
+        },
+        {
+            headers: {
+                "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "accept": "application/json",
+                "X-CSRF-Token": csrfToken,
+            },
+            body: (() => {
+                const formBody = new URLSearchParams();
+                formBody.set("planner_note[title]", plannerNote.title);
+                formBody.set("planner_note[todo_date]", plannerNote.todo_date);
+                if (plannerNote.details) formBody.set("planner_note[details]", plannerNote.details);
+                if (plannerNote.course_id) formBody.set("planner_note[course_id]", plannerNote.course_id);
+                return formBody.toString();
+            })(),
+        },
+    ];
+
+    let lastError = "Canvas rejected task creation.";
+    for (const attempt of attempts) {
+        const response = await fetch(domain + "/api/v1/planner_notes", {
+            method: "POST",
+            headers: attempt.headers,
+            body: attempt.body,
+        });
+
+        if (response.status === 200 || response.status === 201) {
+            return response.json();
+        }
+
+        try {
+            const errData = await response.json();
+            if (errData?.errors?.length) {
+                lastError = errData.errors.join(" ");
+            } else if (errData?.message) {
+                lastError = errData.message;
+            }
+        } catch (_) {
+            // Keep prior error text when body is not JSON.
+        }
+    }
+
+    throw new Error(lastError || "Canvas rejected task creation.");
+}
+
+function fillTaskCourseOptions(courseSelect) {
+    const cards = options.custom_cards || {};
+    const courseColors = options.custom_cards_3 || {};
+    const currentCourseId = getCurrentCourseId();
+    const entries = Object.entries(cards)
+        .map(([id, card]) => ({
+            id,
+            label: card?.default || `Course ${id}`,
+            color:
+                courseColors?.[String(id)]?.color ??
+                courseColors?.[id]?.color ??
+                "#c7cdd1",
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+
+    courseSelect.innerHTML = '<option value="">Personal task</option>';
+    courseSelect.options[0].dataset.color = "#c7cdd1";
+    entries.forEach(entry => {
+        const option = makeElement("option", courseSelect, {
+            value: entry.id,
+            textContent: entry.label,
+        });
+        option.dataset.color = entry.color;
+        option.style.color = entry.color;
+        if (currentCourseId && String(currentCourseId) === String(entry.id)) {
+            option.selected = true;
+        }
+    });
+}
+
+function updateTaskCourseSelectColor(courseSelect) {
+    const selectedOption = courseSelect?.options?.[courseSelect.selectedIndex];
+    const color = selectedOption?.dataset?.color || "#c7cdd1";
+    courseSelect.style.borderLeft = `4px solid ${color}`;
+    courseSelect.style.paddingLeft = "8px";
+}
+
+function ensureTodoTaskMenu(location, feedbackElement) {
+    let actionsRow = location.querySelector("#better-todo-actions-row");
+
+    if (!actionsRow) {
+        actionsRow = makeElement("div", location, {
+            id: "better-todo-actions-row",
+            style: "display:flex;flex-direction:column;gap:8px;margin-top:14px;",
+        });
+
+        const addTaskButton = makeElement("button", actionsRow, {
+            id: "better-todo-add-task-btn",
+            className: "bettercanvas-custom-btn",
+            textContent: "+ Add Task",
+            style: "width:100%;padding:6px 8px;cursor:pointer;",
+        });
+
+        const menu = makeElement("div", actionsRow, {
+            id: "better-todo-add-task-menu",
+            className: "bettercanvas-add-assignment",
+        });
+
+        menu.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:8px;padding:8px;border:1px solid #c7cdd1;border-radius:6px;background:var(--bcbackground-2);">
+                <input type="text" id="better-todo-new-task-title" class="bettercanvas-custom-input" placeholder="Task title" maxlength="255">
+                <textarea id="better-todo-new-task-details" class="bettercanvas-custom-input" placeholder="Details (optional)" style="min-height:70px;resize:vertical;padding-top:6px;padding-bottom:6px;"></textarea>
+                <select id="better-todo-new-task-course" class="bettercanvas-custom-input"></select>
+                <div style="display:flex;gap:6px;">
+                    <input type="date" id="better-todo-new-task-date" class="bettercanvas-custom-input">
+                    <input type="time" id="better-todo-new-task-time" class="bettercanvas-custom-input">
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <span id="better-todo-add-task-status" style="font-size:12px;color:var(--bctext-0);"></span>
+                    <button id="better-todo-add-task-submit" class="bettercanvas-custom-btn" style="padding:4px 10px;cursor:pointer;" type="button">Create</button>
+                </div>
+            </div>
+        `;
+
+        const today = new Date();
+        menu.querySelector("#better-todo-new-task-date").value = formatDateForInput(today);
+        menu.querySelector("#better-todo-new-task-time").value = formatTimeForInput(today);
+        const courseSelect = menu.querySelector("#better-todo-new-task-course");
+        fillTaskCourseOptions(courseSelect);
+        updateTaskCourseSelectColor(courseSelect);
+        courseSelect.addEventListener("change", () => updateTaskCourseSelectColor(courseSelect));
+
+        addTaskButton.addEventListener("click", () => {
+            menu.classList.toggle("bettercanvas-custom-open");
+        });
+
+        menu.querySelector("#better-todo-add-task-submit").addEventListener("click", async () => {
+            const status = menu.querySelector("#better-todo-add-task-status");
+            const submitButton = menu.querySelector("#better-todo-add-task-submit");
+            status.textContent = "";
+            submitButton.disabled = true;
+
+            try {
+                const payload = buildPlannerNotePayload(menu);
+                await createCanvasPlannerNote(payload);
+                status.textContent = "Task created.";
+                status.style.color = "#198754";
+                menu.querySelector("#better-todo-new-task-title").value = "";
+                menu.querySelector("#better-todo-new-task-details").value = "";
+                menu.classList.remove("bettercanvas-custom-open");
+
+                getAssignments();
+                clearTodoList();
+                createTodoSections(location);
+            } catch (e) {
+                status.textContent = e?.message || "Could not create task.";
+                status.style.color = "#db3754";
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    }
+
+    if (feedbackElement) {
+        if (actionsRow.nextSibling !== feedbackElement) {
+            location.insertBefore(actionsRow, feedbackElement);
+        }
+    } else if (actionsRow.parentElement !== location) {
+        location.append(actionsRow);
+    }
+}
+
 async function createTodoSections(location) {
 	if (!location.querySelector("#better-todo-header")) {
 		let header = makeElement("div", location, { id: "better-todo-header" });
@@ -1376,7 +1611,8 @@ async function createTodoSections(location) {
 			populateAssignments(true);
 		}
 
-		const feedbackElement = document.querySelector(".recent_feedback");
+        const feedbackElement = location.querySelector(".recent_feedback");
+        ensureTodoTaskMenu(location, feedbackElement);
 		if (feedbackElement) {
 			if (options.todo_hide_feedback == true) {
 				feedbackElement.style.display = "none";
@@ -1443,7 +1679,17 @@ function clearTodoList() {
 function populateAssignments(iscompleted = false) {
 	const today = new Date();
 	today.setHours(0,0,0,0);
-	let assignments = iscompleted ? completed : assignmentsDue;
+    let assignments = (iscompleted ? completed : assignmentsDue).slice();
+    if (iscompleted) {
+        assignments.sort((a, b) => {
+            const aIsGraded = Boolean(a.submissions?.graded);
+            const bIsGraded = Boolean(b.submissions?.graded);
+            if (aIsGraded !== bIsGraded) {
+                return aIsGraded - bIsGraded;
+            }
+            return new Date(b.plannable_date) - new Date(a.plannable_date);
+        });
+    }
 
 	let assignmentCount = 0;
 	const maxElements = options.num_todo_items;
@@ -1499,17 +1745,26 @@ function populateAssignments(iscompleted = false) {
 			options.custom_cards_3?.[item.plannable.course_id]?.color ??
 			"#cccccc";
 
+        const isCustomTask = item.plannable_type == "planner_note" || item.planner_override?.custom === true;
+        const iconSize = isCustomTask ? 26 : 20;
+        const iconLeftOffset = isCustomTask ? 2 : 5;
+        const taskIcon = isCustomTask
+            ? `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;">
+                <path d="M19.8201 14H15.6001C15.04 14 14.76 14 14.5461 14.109C14.3579 14.2049 14.2049 14.3578 14.1091 14.546C14.0001 14.7599 14.0001 15.0399 14.0001 15.6V19.82M20 12.7269V7.2C20 6.0799 20 5.51984 19.782 5.09202C19.5903 4.71569 19.2843 4.40973 18.908 4.21799C18.4802 4 17.9201 4 16.8 4H7.2C6.0799 4 5.51984 4 5.09202 4.21799C4.71569 4.40973 4.40973 4.71569 4.21799 5.09202C4 5.51984 4 6.0799 4 7.2V16.8C4 17.9201 4 18.4802 4.21799 18.908C4.40973 19.2843 4.71569 19.5903 5.09202 19.782C5.51984 20 6.0799 20 7.2 20H12.9496C13.4578 20 13.7118 20 13.9498 19.9407C14.1608 19.8882 14.3618 19.8016 14.5449 19.6844C14.7515 19.5522 14.926 19.3675 15.2751 18.9983L19.1254 14.9252C19.4486 14.5833 19.6101 14.4124 19.7255 14.2156C19.8278 14.041 19.903 13.8519 19.9486 13.6548C20 13.4325 20 13.1973 20 12.7269Z" stroke="var(--bctext-0)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>`
+            : `<svg fill="var(--bctext-0)" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;">
+                <g id="SVGRepo_bgCarrier" stroke-width="1"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                <g id="SVGRepo_iconCarrier">
+                    <path d="M1468.214 0v551.145L840.27 1179.089c-31.623 31.623-49.693 74.54-49.693 119.715v395.289h395.288c45.176 0 88.093-18.07 119.716-49.694l162.633-162.633v438.206H0V0h1468.214Zm129.428 581.3c22.137-22.136 57.825-22.136 79.962 0l225.879 225.879c22.023 22.023 22.023 57.712 0 79.848l-677.638 677.637c-10.616 10.503-24.96 16.49-39.98 16.49H903.516v-282.35c0-15.02 5.986-29.364 16.49-39.867Zm-920.005 548.095H338.82v112.94h338.818v-112.94Zm225.88-225.879H338.818v112.94h564.697v-112.94Zm734.106-202.5-89.561 89.56 146.03 146.031 89.562-89.56-146.031-146.031Zm-508.228-362.197H338.82v338.818h790.576V338.82Z" fill-rule="evenodd"></path>
+                </g>
+            </svg>`;
+
 		assignment.style.overflowX = "hidden";
 		assignment.innerHTML = `
 		<div style="display:flex;align-items:center;gap:5px;width:100%;height:60px;background:var(--bcbackground-2);border-radius:5px;transition:all .4s ease;overflow:hidden;">
 			<div style="width:40px;display:flex;align-items:center;justify-content:center;background-color:${courseColor};height:100%;border-radius:5px 0 0 5px;">
-				<div style="width:20px;height:20px;display:flex;margin-left:5px;">
-					<svg fill="var(--bctext-0)" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg">
-						<g id="SVGRepo_bgCarrier" stroke-width="1"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-						<g id="SVGRepo_iconCarrier">
-							<path d="M1468.214 0v551.145L840.27 1179.089c-31.623 31.623-49.693 74.54-49.693 119.715v395.289h395.288c45.176 0 88.093-18.07 119.716-49.694l162.633-162.633v438.206H0V0h1468.214Zm129.428 581.3c22.137-22.136 57.825-22.136 79.962 0l225.879 225.879c22.023 22.023 22.023 57.712 0 79.848l-677.638 677.637c-10.616 10.503-24.96 16.49-39.98 16.49H903.516v-282.35c0-15.02 5.986-29.364 16.49-39.867Zm-920.005 548.095H338.82v112.94h338.818v-112.94Zm225.88-225.879H338.818v112.94h564.697v-112.94Zm734.106-202.5-89.561 89.56 146.03 146.031 89.562-89.56-146.031-146.031Zm-508.228-362.197H338.82v338.818h790.576V338.82Z" fill-rule="evenodd"></path>
-						</g>
-					</svg>
+                <div style="width:${iconSize}px;height:${iconSize}px;display:flex;margin-left:${iconLeftOffset}px;">
+                    ${taskIcon}
 				</div>
 			</div>
 			<div style="width:calc(100% - 40px);height:80%;display:flex;flex-direction:column;gap:5px;padding-left:2px;box-sizing:border-box;overflow:hidden;position:relative;">
@@ -1617,7 +1872,7 @@ function populateAnnouncements() {
 function markAs(item, element) {
 	const csrfToken = CSRFtoken();
 	const completeState = item.planner_override ? !item.planner_override.marked_complete : true;
-	fetch(domain + "/api/v1/planner/overrides/" + (item.planner_override ? "/" + item.planner_override.id : ""), {
+    fetch(domain + "/api/v1/planner/overrides" + (item.planner_override ? "/" + item.planner_override.id : ""), {
 		method: item.planner_override ? "PUT" : "POST",
 		headers: {
 			"content-type":"application/json",
@@ -1632,7 +1887,7 @@ function markAs(item, element) {
 		})
 	})
 	.then(resp => {
-		if (resp.status == 200 || resp.status == 201) {
+        if (resp.status == 200 || resp.status == 201 || resp.status == 204) {
 			console.log("marked as complete");
 			item.planner_override = item.planner_override || {};
 			item.planner_override.marked_complete = completeState;
@@ -2663,6 +2918,7 @@ function loadCardAssignments() {
         });
         return;
     }
+    setupCardAssignments();
     cardAssignments.then(els => {
         try {
             let cards = document.querySelectorAll('.ic-DashboardCard');
@@ -2675,8 +2931,11 @@ function loadCardAssignments() {
                 if (!link) return;
                 let course_id = link.href.split("courses/")[1];
                 let cardContainer = card.querySelector('.bettercanvas-card-container');
+                if (!cardContainer) return;
                 cardContainer.textContent = "";
-                cardContainer.parentElement.style.display = "block";
+                if (cardContainer.parentElement) {
+                    cardContainer.parentElement.style.display = "block";
+                }
 
                 if (els[course_id]) {
                     els[course_id].forEach(assignment => {
