@@ -106,7 +106,7 @@ chrome.runtime.onInstalled.addListener(function () {
         }
     };
 
-    const updateMsg = "Betterer Canvas was just updated!\nThis version added new themes, cumulative GPA into the GPA calculator, and a new sorting function for themes.";
+    const updateMsg = "Canvas Refined was just updated!\nThis version added new themes, cumulative GPA into the GPA calculator, and a new sorting function for themes.";
 
     chrome.storage.local.get(null, local => {
         chrome.storage.sync.get(null, async sync => {
@@ -138,4 +138,4 @@ chrome.runtime.onInstalled.addListener(function () {
     });
 });
 
-// chrome.runtime.setUninstallURL("https://diditupe.dev/bettercanvas/goodbye");
+// chrome.runtime.setUninstallURL("https://diditupe.dev/canvasrefined/goodbye");

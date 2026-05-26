@@ -33,7 +33,7 @@ const localSwitches = [];
 const fontsDropdownStateKey = "fonts_dropdown_open";
 
 //const apiurl = "http://localhost:3000";
-const apiurl = "https://bettercanvas.diditupe.dev";
+const apiurl = "https://canvasrefined.diditupe.dev";
 
 const defaultOptions = {
     "local": {
@@ -509,7 +509,7 @@ function setup() {
     // activate dark mode fixer button
     document.querySelector("#fix-dm-btn").addEventListener("click", async function () {
         let output = await sendFromPopup("fixdm");
-        if (output.path === "bettercanvas-none" || output.path === "bettercanvas-darkmode_off") return;
+        if (output.path === "canvasrefined-none" || output.path === "canvasrefined-darkmode_off") return;
         let rating = "bad";
         if (output.time < 100) {
             rating = "good";
@@ -1361,7 +1361,7 @@ async function displayThemeListNew(direction) { // TODO: remake
             console.log(e);
             current_page_num = 1;
             fallback = true;
-            displayAlert(true, "There was a problem getting themes from the Better Canvas server, so the old themes browser is being displayed for now.");
+            displayAlert(true, "there is no server you should not be seeing this. There was a problem getting themes from the Canvas Refined server, so the old themes browser is being displayed for now.");
             displayThemeListOld(0);
             return;
         }
