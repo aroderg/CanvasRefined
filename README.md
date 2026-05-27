@@ -2,7 +2,7 @@
 
 # Canvas Refined
 
-I don't like the direction canvasrefined (bettercampus) is heading so I forked it
+I don't like the direction bettercanvas (bettercampus) is heading so I forked it
 
 They tried to change license but forgot to rebase so this is based on the MIT licensed version and fully legal 🙃
 
