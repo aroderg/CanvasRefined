@@ -8,6 +8,7 @@ function getCurrentCourseId() {
 
 function getSidebarLayoutMode() {
     if (current_page.match(/^\/courses\/(\d+)(?:\/|$)/)) return "course";
+    if (isProfilePage()) return "course";
     if (current_page === "/courses" || current_page === "/courses/") return "dash";
     if (current_page === "/" || current_page === "") return "dash";
     return "dash";
@@ -29,6 +30,10 @@ function isConversationsPage() {
     return /^\/conversations(?:\/|$)/.test(current_page);
 }
 
+function isProfilePage() {
+    return /^\/profile(?:\/|$)/.test(current_page);
+}
+
 function getSubmissionAssignmentLink() {
     const match = current_page.match(/^\/courses\/(\d+)\/assignments\/(\d+)\/submissions\/(\d+)(?:\/|$)/);
     if (!match) return null;
@@ -36,6 +41,7 @@ function getSubmissionAssignmentLink() {
 }
 
 let submissionPageButtonObserver = null;
+let profileLogoutButtonObserver = null;
 
 function addSubmissionPageButton() {
     const assignmentLink = getSubmissionAssignmentLink();
@@ -118,6 +124,50 @@ function watchSubmissionPageButton() {
     }, 10000);
 }
 
+function addProfileLogoutPageButton() {
+    if (!isProfilePage()) return;
+    const content = document.getElementById("content");
+    if (!content || content.querySelector("#canvasrefined-profile-logout")) return;
+
+    makeElement("a", content, {
+        id: "canvasrefined-profile-logout",
+        className: "canvasrefined-custom-btn",
+        href: `${domain}/logout`,
+        textContent: "Logout",
+        style: "display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;margin:0 0 12px 0;padding:10px 14px;text-decoration:none;font-weight:700;",
+    }, true);
+}
+
+function ensureProfileLogoutPageButton() {
+    if (!isProfilePage()) return false;
+    const content = document.getElementById("content");
+    if (!content) return false;
+    if (content.querySelector("#canvasrefined-profile-logout")) return true;
+    addProfileLogoutPageButton();
+    return Boolean(content.querySelector("#canvasrefined-profile-logout"));
+}
+
+function watchProfileLogoutPageButton() {
+    if (!isProfilePage()) return;
+    if (ensureProfileLogoutPageButton()) return;
+    if (profileLogoutButtonObserver) return;
+
+    profileLogoutButtonObserver = new MutationObserver(() => {
+        if (ensureProfileLogoutPageButton() && profileLogoutButtonObserver) {
+            profileLogoutButtonObserver.disconnect();
+            profileLogoutButtonObserver = null;
+        }
+    });
+
+    profileLogoutButtonObserver.observe(document.documentElement, { childList: true, subtree: true });
+    setTimeout(() => {
+        if (profileLogoutButtonObserver) {
+            profileLogoutButtonObserver.disconnect();
+            profileLogoutButtonObserver = null;
+        }
+    }, 10000);
+}
+
 function getSidebarStateMode(mode = getSidebarLayoutMode()) {
     return mode === "course" ? "course" : "dashboard";
 }
@@ -127,10 +177,7 @@ function getSidebarStateKey(mode = getSidebarLayoutMode()) {
 }
 
 async function getSidebarExpandedState(mode = getSidebarLayoutMode()) {
-    const key = getSidebarStateKey(mode);
-    const storage = await chrome.storage.local.get(key);
-    if (typeof storage[key] === "boolean") return storage[key];
-    return mode === "course";
+    return false;
 }
 
 function setSidebarExpandedState(mode, expanded) {
@@ -410,6 +457,7 @@ function startExtension() {
         ensureBetterSidebar();
         watchSequenceFooter();
         watchSubmissionPageButton();
+        watchProfileLogoutPageButton();
 
         //getClassAverages();
         
@@ -610,13 +658,23 @@ function resetBetterSidebarLayout() {
     document.querySelector(".ic-Layout-contentMain")?.style.removeProperty("backdrop-filter");
     document.querySelector(".ic-Layout-contentMain")?.style.removeProperty("-webkit-backdrop-filter");
     document.getElementById("left-side")?.style.removeProperty("display");
+    document.getElementById("left-side")?.style.removeProperty("padding-top");
+    document.getElementById("left-side")?.style.removeProperty("padding-left");
+    document.getElementById("section-tabs")?.style.removeProperty("padding-top");
     document.getElementById("better-sidebar-container")?.remove();
     clearBetterSidebarLayoutFix();
 }
 
 function ensureBetterSidebar() {
     if (!options.better_sidebar) return;
-    if (document.querySelector("#better-sidebar-container")) return;
+    const existingSidebar = document.querySelector("#better-sidebar-container");
+    if (existingSidebar) {
+        const expander = existingSidebar.querySelector(".better-sidebar-expander");
+        existingSidebar.dataset.expanded = "false";
+        setSidebarExpandedState(getSidebarLayoutMode(), false);
+        updateSidebar(false, existingSidebar, expander);
+        return;
+    }
     if (!document.querySelector("#wrapper") || !document.querySelector(".ic-Layout-contentWrapper")) return;
     setupBetterSidebar(getSidebarLayoutMode());
 }
@@ -2371,7 +2429,6 @@ async function setupBetterSidebar(mode = getSidebarLayoutMode()) {
         leftSide?.style.setProperty("position", "static");
         const mainWrapper = document.querySelector(".ic-Layout-contentWrapper");
         if (!mainWrapper) return;
-        const expandedPromise = getSidebarExpandedState(layoutMode);
         applyBetterSidebarLayoutFix();
         mainWrapper.style.display = "flex";
         mainWrapper.style.alignItems = "stretch";
@@ -2382,6 +2439,16 @@ async function setupBetterSidebar(mode = getSidebarLayoutMode()) {
         if (layoutMode === "course" && leftSide) {
             const notRightSide = document.getElementById("not_right_side");
             const rightSideWrapper = document.getElementById("right-side-wrapper");
+            const sectionTabs = document.getElementById("section-tabs");
+            leftSide.style.setProperty("padding-top", "0", "important");
+            leftSide.style.setProperty("padding-left", "0", "important");
+            if (sectionTabs) {
+                if (getCurrentCourseId() !== null || isProfilePage()) {
+                    sectionTabs.style.setProperty("padding-top", "40px", "important");
+                } else {
+                    sectionTabs.style.removeProperty("padding-top");
+                }
+            }
             leftSide.style.flex = "0 0 250px";
             leftSide.style.width = "250px";
             leftSide.style.maxWidth = "250px";
@@ -2445,7 +2512,7 @@ async function setupBetterSidebar(mode = getSidebarLayoutMode()) {
         updateSidebar(false, sidebarList, expander);
         requestAnimationFrame(() => populateSidebarFromNav(sidebarContent));
 
-        let expanded = await expandedPromise;
+        let expanded = false;
         sidebarList.dataset.expanded = expanded ? "true" : "false";
         updateSidebar(expanded, sidebarList, expander);
         setSidebarExpandedState(layoutMode, expanded);
