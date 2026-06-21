@@ -35,7 +35,8 @@ const localSwitches = [];
 const fontsDropdownStateKey = "fonts_dropdown_open";
 
 //const apiurl = "http://localhost:3000";
-const apiurl = "https://canvasrefined.diditupe.dev";
+// const apiurl = "https://canvasrefined.diditupe.dev";
+const apiurl = "none";
 
 const defaultOptions = {
     "local": {

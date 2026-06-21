@@ -8,6 +8,11 @@ They tried to change license but forgot to rebase so this is based on the MIT li
 
 There is a dev branch for active alpha if you really want
 
+# Get it now!
+
+1. get it on the [chrome web store](https://chromewebstore.google.com/detail/canvasrefined/ihienfbdfdamhmhhiokjnjmpjgbenedg)! 
+2. get it on the [firefox addon store](https://addons.mozilla.org/en-US/firefox/addon/canvas-refined/)!
+
 ## Inquiries
 
 To contact me, please email sandlerguy5@gmail.com, or you can open an issue within the "Issues" tab on GitHub.
@@ -16,7 +21,6 @@ To contact me, please email sandlerguy5@gmail.com, or you can open an issue with
 
 - [Features](#features)
 - [Dev Installation](#dev-installation)
-- [Usage](#usage)
 - [Version Notes](#version-notes)
 - [Color Reference](#color-reference)
 - [Contributing](#contributing)
@@ -55,8 +59,8 @@ Canvas Refined adds more with more to come!
 - Custom Background (by URL, theme compatible)
 - Popup UI revamp
 - NEW Better todo list
-- better sidebar
-- simplified UI
+- Better sidebar
+- Simplified UI
 
 ## Planned Features (by priority)
 - widgets (music, timer)
@@ -66,7 +70,6 @@ Canvas Refined adds more with more to come!
 - better what if grade
 - global search
 - fix darkmode fixer
-- make sidebar and todo list work on all pages that need them
 - grade history with graph
 
 ## Extra features that might be added:
@@ -101,13 +104,6 @@ To install, run, and build with this repository locally,
 - Enable developer mode by toggling the switch in the upper right corner of the viewport.
 - Click the "Load upacked" button in the header.
 - When prompted to open a file, select the root directory of this repository.
-
-## Usage
-
-<!-- To use Canvas Refined, select your browser below to install the extension from a store. -->
-To use Canvas Refined, clone the repo or manually download from the releases page.
-
-More active beta is on the dev branch.
 
 ### How to use
 
